@@ -16,6 +16,8 @@ from TTS.tts.models.xtts import Xtts
 from TTS.utils.generic_utils import get_user_data_dir
 from TTS.utils.manage import ModelManager
 
+from src import local_generation
+
 torch.set_num_threads(int(os.environ.get("NUM_THREADS", os.cpu_count())))
 device = torch.device("cuda" if os.environ.get("USE_CPU", "0") == "0" else "cpu")
 if not torch.cuda.is_available() and device == "cuda":
@@ -41,6 +43,11 @@ model = Xtts.init_from_config(config)
 model.load_checkpoint(config, checkpoint_dir=model_path, eval=True, use_deepspeed=True if device == "cuda" else False)
 model.to(device)
 print("XTTS Loaded.", flush=True)
+
+all_audio = os.listdir(os.path.join(model_path, "reference_audio"))
+all_audio = [os.path.join(model_path, "reference_audio", audio) for audio in all_audio]
+
+xtts_gpt_cond_latent, xtts_speaker_embedding = model.get_conditioning_latents(audio_path=all_audio)
 
 print("Running XTTS Server ...", flush=True)
 
@@ -143,26 +150,27 @@ def predict_streaming_endpoint(parsed_input: StreamingInputs):
     )
 
 class TTSInputs(BaseModel):
-    speaker_embedding: List[float]
-    gpt_cond_latent: List[List[float]]
     text: str
     language: str
+    silence_length: List[float]
 
 @app.post("/tts")
 def predict_speech(parsed_input: TTSInputs):
-    speaker_embedding = torch.tensor(parsed_input.speaker_embedding).unsqueeze(0).unsqueeze(-1)
-    gpt_cond_latent = torch.tensor(parsed_input.gpt_cond_latent).reshape((-1, 1024)).unsqueeze(0)
     text = parsed_input.text
     language = parsed_input.language
+    silence_length = parsed_input.silence_length
+    silence_length = [int(s*24000) for s in silence_length]
 
-    out = model.inference(
-        text,
-        language,
-        gpt_cond_latent,
-        speaker_embedding,
+    out = local_generation(
+        model=model,
+        speaker_embedding=xtts_speaker_embedding,
+        gpt_cond_latent=xtts_gpt_cond_latent,
+        text=text,
+        language=language,
+        silence_dot=silence_length
     )
 
-    wav = postprocess(torch.tensor(out["wav"]))
+    wav = postprocess(out)
 
     return encode_audio_common(wav.tobytes())
 

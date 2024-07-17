@@ -14,6 +14,7 @@ RUN python -m unidic download
 RUN mkdir -p /app/tts_models
 
 COPY main.py .
+COPY src.py .
 ENV NVIDIA_DISABLE_REQUIRE=1
 
 ENV NUM_THREADS=2
