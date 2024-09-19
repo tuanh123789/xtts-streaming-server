@@ -40,7 +40,7 @@ print("Loading XTTS", flush=True)
 config = XttsConfig()
 config.load_json(os.path.join(model_path, "config.json"))
 model = Xtts.init_from_config(config)
-model.load_checkpoint(config, checkpoint_dir=model_path, eval=True, use_deepspeed=True if device == "cuda" else False)
+model.load_checkpoint(config, checkpoint_dir=model_path, eval=True, use_deepspeed=False if device == "cuda" else False)
 model.to(device)
 print("XTTS Loaded.", flush=True)
 
@@ -152,14 +152,21 @@ def predict_streaming_endpoint(parsed_input: StreamingInputs):
 class TTSInputs(BaseModel):
     text: str
     language: str
-    silence_length: List[float]
+    silence_length: float = 1
+    temperature: float = 0.65 
+    top_k: int = 50
+    top_p: float = 0.8 
+    speed: float = 1.0
 
 @app.post("/tts")
 def predict_speech(parsed_input: TTSInputs):
     text = parsed_input.text
     language = parsed_input.language
     silence_length = parsed_input.silence_length
-    silence_length = [int(s*24000) for s in silence_length]
+    temperature = parsed_input.temperature
+    top_k = parsed_input.top_k
+    top_p = parsed_input.top_p
+    speed = parsed_input.speed
 
     out = local_generation(
         model=model,
@@ -167,7 +174,11 @@ def predict_speech(parsed_input: TTSInputs):
         gpt_cond_latent=xtts_gpt_cond_latent,
         text=text,
         language=language,
-        silence_dot=silence_length
+        silence_length=silence_length,
+        temperature=temperature,
+        top_k=top_k,
+        top_p=top_p,
+        speed=speed
     )
 
     wav = postprocess(out)

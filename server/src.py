@@ -7,6 +7,8 @@ from spacy.lang.es import Spanish
 from spacy.lang.ja import Japanese
 from spacy.lang.zh import Chinese
 
+silence_dot = [0.1, 0.15, 0.05, 0.2]
+
 def get_spacy_lang(lang):
     if lang == "zh":
         return Chinese()
@@ -36,7 +38,7 @@ def split_sentence(text, lang):
     return text_splits
 
 
-def local_generation(speaker_embedding, gpt_cond_latent, model, text, language, silence_dot):
+def local_generation(speaker_embedding, gpt_cond_latent, model, text, language, silence_length, temperature, top_k, top_p, speed):
     wavs = []
     text = split_sentence(text, language)
     start = 0
@@ -49,9 +51,21 @@ def local_generation(speaker_embedding, gpt_cond_latent, model, text, language, 
             language,
             gpt_cond_latent=gpt_cond_latent,
             speaker_embedding=speaker_embedding,
+            temperature=temperature,
+            top_k=top_k,
+            top_p=top_p,
+            speed=speed,
             enable_text_splitting=False,
         )
-        dot_silence = torch.zeros(random.choices(silence_dot))
+        random_choice = random.choice([0, 1])
+        if random_choice == 0:
+            silence = random.choices(silence_dot)[0] + silence_length
+            silence = int(silence * 24000)
+        else:
+            silence = random.choices(silence_dot)[0] + silence_length
+            silence = int(silence * 24000)
+
+        dot_silence = torch.zeros([silence])
         dot_silence_length = dot_silence.shape[0] / 24000
         audio_length = out["wav"].shape[0] / 24000
 
