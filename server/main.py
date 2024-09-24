@@ -1,6 +1,7 @@
 import base64
 import io
 import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
 import tempfile
 import wave
 import torch
@@ -9,7 +10,7 @@ from typing import List
 from pydantic import BaseModel
 
 from fastapi import FastAPI, UploadFile, Body
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 
 from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
@@ -18,7 +19,7 @@ from TTS.utils.manage import ModelManager
 
 from src import local_generation
 
-torch.set_num_threads(int(os.environ.get("NUM_THREADS", os.cpu_count())))
+#torch.set_num_threads(int(os.environ.get("NUM_THREADS", os.cpu_count())))
 device = torch.device("cuda" if os.environ.get("USE_CPU", "0") == "0" else "cpu")
 if not torch.cuda.is_available() and device == "cuda":
     raise RuntimeError("CUDA device unavailable, please use Dockerfile.cpu instead.") 
@@ -76,14 +77,26 @@ def predict_speaker(wav_file: UploadFile):
 
 
 def postprocess(wav):
-    """Post process the output waveform"""
-    if isinstance(wav, list):
-        wav = torch.cat(wav, dim=0)
-    wav = wav.clone().detach().cpu().numpy()
-    wav = wav[None, : int(wav.shape[0])]
-    wav = np.clip(wav, -1, 1)
-    wav = (wav * 32767).astype(np.int16)
-    return wav
+    wav = wav.cpu().numpy()
+    wav = wav * 32767
+    wav = wav.astype("int16")
+
+
+    wav_header = np.array([
+        1179011410,
+        len(wav) * 2 + 44 - 8,
+        1163280727,
+        544501094,
+        16,
+        65537,
+        24000,
+        48000,
+        1048578,
+        1635017060,
+        len(wav) * 2
+    ], dtype=np.int32)
+
+    return wav_header.tobytes() + wav.tobytes()
 
 
 def encode_audio_common(
@@ -183,7 +196,7 @@ def predict_speech(parsed_input: TTSInputs):
 
     wav = postprocess(out)
 
-    return encode_audio_common(wav.tobytes())
+    return Response(content=wav, media_type="audio/x-wav")
 
 
 @app.get("/studio_speakers")
