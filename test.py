@@ -11,10 +11,10 @@ data = {
     "speed": 1
 }
 res = requests.post(
-        url="http://localhost:8000/tts",
+        url="http://localhost:6969/tts",
         json=data,
 )
 
-print(res.content)
+print(res.headers)
 with open("result.wav", "wb") as fp:
     fp.write(res.content)

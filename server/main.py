@@ -181,7 +181,7 @@ def predict_speech(parsed_input: TTSInputs):
     top_p = parsed_input.top_p
     speed = parsed_input.speed
 
-    out = local_generation(
+    out, srt_file = local_generation(
         model=model,
         speaker_embedding=xtts_speaker_embedding,
         gpt_cond_latent=xtts_gpt_cond_latent,
@@ -196,7 +196,7 @@ def predict_speech(parsed_input: TTSInputs):
 
     wav = postprocess(out)
 
-    return Response(content=wav, media_type="audio/x-wav")
+    return Response(content=wav, media_type="audio/x-wav", headers={"srt_file": str(srt_file)})
 
 
 @app.get("/studio_speakers")

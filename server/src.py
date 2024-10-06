@@ -37,6 +37,22 @@ def split_sentence(text, lang):
     
     return text_splits
 
+def convert_seconds(seconds):
+    # Calculate hours
+    hours = seconds // 3600
+    seconds %= 3600
+
+    # Calculate minutes
+    minutes = seconds // 60
+    seconds %= 60
+
+    # Calculate milliseconds
+    milliseconds = (seconds - int(seconds)) * 1000
+
+    # Convert remaining seconds to an integer
+    seconds = int(seconds)
+
+    return f"{int(hours):02}:{int(minutes):02}:{seconds:02},{int(milliseconds):03}"
 
 def local_generation(speaker_embedding, gpt_cond_latent, model, text, language, silence_length, temperature, top_k, top_p, speed):
     wavs = []
@@ -44,6 +60,7 @@ def local_generation(speaker_embedding, gpt_cond_latent, model, text, language, 
     start = 0
     end = 0
     time_stamp = []
+    srt_file = []
 
     for sent in text:
         out = model.inference(
@@ -82,6 +99,18 @@ def local_generation(speaker_embedding, gpt_cond_latent, model, text, language, 
         
         wavs.append(dot_silence)
     
+    for id, (t, segment) in enumerate(zip(text, time_stamp)):
+        startime = convert_seconds(segment[0])
+        endtime = convert_seconds(segment[1])
+        segment_id = str(id+1)
+        if isinstance(t, str):
+            segment = f"{segment_id}\n{startime} --> {endtime}\n{t}\n\n"
+        else:
+            t = ", ".join(t)
+            segment = f"{segment_id}\n{startime} --> {endtime}\n{t}\n\n"
+        
+        srt_file.append(segment)
+    
     wav_output = torch.cat(wavs, dim=0)
     
-    return wav_output
+    return wav_output, srt_file
