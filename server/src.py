@@ -92,12 +92,6 @@ def local_generation(speaker_embedding, gpt_cond_latent, model, text, language, 
 
         wavs.append(torch.from_numpy(out["wav"]))
         wavs.append(dot_silence)
-        
-        end = start + audio_length
-        time_stamp.append((start, end))
-        start = end + dot_silence_length
-        
-        wavs.append(dot_silence)
     
     for id, (t, segment) in enumerate(zip(text, time_stamp)):
         startime = convert_seconds(segment[0])
