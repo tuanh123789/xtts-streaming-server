@@ -54,7 +54,7 @@ def convert_seconds(seconds):
 
     return f"{int(hours):02}:{int(minutes):02}:{seconds:02},{int(milliseconds):03}"
 
-def local_generation(speaker_embedding, gpt_cond_latent, model, text, language, silence_length, temperature, top_k, top_p, speed):
+def local_generation(speaker_embedding, gpt_cond_latent, model, text, language, silence_length, temperature, top_k, top_p, speed, length_penalty, repetition_penalty):
     wavs = []
     text = split_sentence(text, language)
     start = 0
@@ -69,6 +69,8 @@ def local_generation(speaker_embedding, gpt_cond_latent, model, text, language, 
             gpt_cond_latent=gpt_cond_latent,
             speaker_embedding=speaker_embedding,
             temperature=temperature,
+            length_penalty=length_penalty,
+            repetition_penalty=repetition_penalty,
             top_k=top_k,
             top_p=top_p,
             speed=speed,

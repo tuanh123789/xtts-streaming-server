@@ -170,6 +170,8 @@ class TTSInputs(BaseModel):
     top_k: int = 50
     top_p: float = 0.8 
     speed: float = 1.0
+    length_penalty: float = 1.0
+    repetition_penalty:float = 5.0
 
 @app.post("/tts")
 def predict_speech(parsed_input: TTSInputs):
@@ -180,6 +182,8 @@ def predict_speech(parsed_input: TTSInputs):
     top_k = parsed_input.top_k
     top_p = parsed_input.top_p
     speed = parsed_input.speed
+    length_penalty = parsed_input.length_penalty
+    repetition_penalty = parsed_input.repetition_penalty
 
     out, srt_file = local_generation(
         model=model,
@@ -191,7 +195,9 @@ def predict_speech(parsed_input: TTSInputs):
         temperature=temperature,
         top_k=top_k,
         top_p=top_p,
-        speed=speed
+        speed=speed,
+        length_penalty=length_penalty,
+        repetition_penalty=repetition_penalty
     )
 
     wav = postprocess(out)
