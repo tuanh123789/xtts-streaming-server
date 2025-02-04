@@ -8,6 +8,7 @@ import torch
 import numpy as np
 from typing import List
 from pydantic import BaseModel
+import unicodedata
 
 from fastapi import FastAPI, UploadFile, Body
 from fastapi.responses import StreamingResponse, Response
@@ -184,6 +185,7 @@ def predict_speech(parsed_input: TTSInputs):
     speed = parsed_input.speed
     length_penalty = parsed_input.length_penalty
     repetition_penalty = parsed_input.repetition_penalty
+    text = text.encode('latin-1', 'replace').decode('latin-1')
 
     out, srt_file = local_generation(
         model=model,

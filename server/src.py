@@ -64,7 +64,7 @@ def local_generation(speaker_embedding, gpt_cond_latent, model, text, language, 
 
     for sent in text:
         out = model.inference(
-            sent,
+            sent + ", ",
             language,
             gpt_cond_latent=gpt_cond_latent,
             speaker_embedding=speaker_embedding,
